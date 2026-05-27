@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeatherSync</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 30px auto; padding: 0 16px; }
+    h1   { font-size: 20px; margin-bottom: 20px; }
+
+    input  { padding: 6px 10px; font-size: 14px; width: 250px; }
+    button { padding: 6px 14px; font-size: 14px; cursor: pointer; }
+
+    .quick-cities { margin: 8px 0 20px; }
+    .quick-cities button { margin-right: 6px; margin-bottom: 6px; font-size: 12px; }
+
+    .error   { color: red; margin: 8px 0; }
+    .loading { color: gray; margin: 8px 0; }
+    .hidden  { display: none; }
+
+    section { border: 1px solid #ccc; padding: 14px; margin-top: 16px; }
+    section h2 { font-size: 15px; margin-bottom: 10px; }
+
+    table { border-collapse: collapse; width: 100%; }
+    td    { padding: 4px 10px 4px 0; font-size: 14px; vertical-align: top; }
+    td:first-child { color: #555; width: 160px; }
+
+    #map { height: 250px; width: 100%; margin-top: 10px; }
+
+    .forecast-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .forecast-day { border: 1px solid #ccc; padding: 8px 12px; text-align: center; font-size: 13px; min-width: 90px; }
+    .forecast-day b { display: block; margin-bottom: 4px; }
+
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .tag  { border: 1px solid #aaa; padding: 3px 10px; font-size: 13px; }
+
+    .tabs { display: flex; gap: 0; margin-bottom: -1px; }
+    .tab  { padding: 6px 16px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; background: #f5f5f5; }
+    .tab.active { background: white; border-bottom-color: white; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>WeatherSync</h1>
+
+<!-- Search -->
+<div>
+  <input id="cityInput" type="text" value="Vienna" placeholder="Stadt eingeben..." />
+  <button id="searchBtn" onclick="search()">Suchen</button>
+</div>
+
+<!-- Quick cities -->
+<div class="quick-cities" id="quickCities"></div>
+
+<!-- Status -->
+<div class="error  hidden" id="errorBox"></div>
+<div class="loading hidden" id="loadingBox">Laden...</div>
+
+<!-- Content -->
+<div id="content" class="hidden">
+
+  <!-- Current weather -->
+  <section>
+    <h2 id="cityName"></h2>
+    <table>
+      <tr><td>Wetter</td>         <td id="weatherDesc"></td></tr>
+      <tr><td>Temperatur</td>     <td><b id="weatherTemp"></b></td></tr>
+      <tr><td>Gefuehlt</td>       <td id="feelsLike"></td></tr>
+      <tr><td>Luftfeuchte</td>    <td id="humidity"></td></tr>
+      <tr><td>Wind</td>           <td id="windSpeed"></td></tr>
+      <tr><td>Luftdruck</td>      <td id="pressure"></td></tr>
+      <tr><td>Sonnenaufgang</td>  <td id="sunrise"></td></tr>
+      <tr><td>Sonnenuntergang</td><td id="sunset"></td></tr>
+    </table>
+    <div id="map"></div>
+  </section>
+
+  <!-- Tabs -->
+  <div style="margin-top: 20px;">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('forecast')">Vorhersage</button>
+      <button class="tab"        onclick="switchTab('recs')">Empfehlungen</button>
+    </div>
+
+    <div id="tab-forecast">
+      <section>
+        <h2>5-Tage Vorhersage</h2>
+        <div class="forecast-row" id="forecastRow"></div>
+      </section>
+    </div>
+
+    <div id="tab-recs" class="hidden">
+      <section>
+        <h2>Empfehlungen</h2>
+        <p><b>Kleidung</b></p>
+        <div class="tags" id="clothingTags"></div>
+        <p style="margin-top:12px"><b>Aktivitaeten</b></p>
+        <div class="tags" id="activityTags"></div>
+        <p style="margin-top:12px" id="advisoryText"></p>
+      </section>
+      <div class="loading hidden" id="recsLoading">Laden...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const WEATHER_API = "http://localhost:3001";
+  const SOAP_API    = "http://localhost:3002";
+
+  // Leaflet map - initialised once, reused on every search
+  let map    = null;
+  let marker = null;
+
+  function initMap(lat, lon, label) {
+    if (!map) {
+      map = L.map("map").setView([lat, lon], 10);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "OpenStreetMap contributors"
+      }).addTo(map);
+    } else {
+      map.setView([lat, lon], 10);
+    }
+
+    if (marker) marker.remove();
+    marker = L.marker([lat, lon]).addTo(map).bindPopup(label).openPopup();
+  }
+
+  // Quick city buttons
+  ["Vienna", "Berlin", "Paris", "Tokyo", "London", "New York"].forEach(city => {
+    const btn = document.createElement("button");
+    btn.textContent = city;
+    btn.onclick = () => { document.getElementById("cityInput").value = city; search(); };
+    document.getElementById("quickCities").appendChild(btn);
+  });
+
+  function switchTab(name) {
+    document.getElementById("tab-forecast").classList.toggle("hidden", name !== "forecast");
+    document.getElementById("tab-recs").classList.toggle("hidden", name !== "recs");
+    document.querySelectorAll(".tab").forEach((btn, i) =>
+            btn.classList.toggle("active", (i === 0) === (name === "forecast"))
+    );
+  }
+
+  async function search() {
+    const city = document.getElementById("cityInput").value.trim();
+    if (!city) return;
+
+    document.getElementById("errorBox").classList.add("hidden");
+    document.getElementById("content").classList.add("hidden");
+    document.getElementById("loadingBox").classList.remove("hidden");
+    document.getElementById("searchBtn").disabled = true;
+
+    try {
+      // 1. Current weather (REST)
+      const r = await fetch(`${WEATHER_API}/weather?city=${encodeURIComponent(city)}`);
+      const j = await r.json();
+      if (!j.success) throw new Error(j.error);
+      const w = j.data;
+
+      document.getElementById("cityName").textContent     = `${w.city}, ${w.country}`;
+      document.getElementById("weatherDesc").textContent  = w.description;
+      document.getElementById("weatherTemp").textContent  = `${w.temperature} C`;
+      document.getElementById("feelsLike").textContent    = `${w.feels_like} C`;
+      document.getElementById("humidity").textContent     = `${w.humidity}%`;
+      document.getElementById("windSpeed").textContent    = `${w.wind_speed} m/s`;
+      document.getElementById("pressure").textContent     = `${w.pressure} hPa`;
+      document.getElementById("sunrise").textContent      = w.sunrise;
+      document.getElementById("sunset").textContent       = w.sunset;
+
+      document.getElementById("content").classList.remove("hidden");
+
+      // 2. Map - geocode the city via OpenStreetMap Nominatim (no API key needed)
+      fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(w.city)}&format=json&limit=1`)
+              .then(r => r.json())
+              .then(results => {
+                if (results.length > 0) {
+                  const lat = parseFloat(results[0].lat);
+                  const lon = parseFloat(results[0].lon);
+                  initMap(lat, lon, `${w.city}, ${w.country}`);
+                  // Leaflet needs a size invalidation after the container becomes visible
+                  setTimeout(() => map.invalidateSize(), 100);
+                }
+              }).catch(() => {});
+
+      // 3. Forecast (REST) - non-blocking
+      fetch(`${WEATHER_API}/forecast?city=${encodeURIComponent(city)}`)
+              .then(r => r.json()).then(j => {
+        if (!j.success) return;
+        document.getElementById("forecastRow").innerHTML = j.data.map(d => `
+              <div class="forecast-day">
+                <b>${d.day}</b>
+                <div>${d.temp_max} / ${d.temp_min} C</div>
+                <div style="font-size:11px;color:#555">${d.description}</div>
+              </div>`).join("");
+      }).catch(() => {});
+
+      // 4. Recommendations (SOAP via REST bridge) - non-blocking
+      document.getElementById("recsLoading").classList.remove("hidden");
+      fetch(`${SOAP_API}/recommend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ condition: w.condition, temperature: w.temperature, humidity: w.humidity, windSpeed: w.wind_speed }),
+      }).then(r => r.json()).then(j => {
+        if (!j.success) return;
+        const rec = j.data;
+        document.getElementById("clothingTags").innerHTML  = rec.clothing.map(c  => `<span class="tag">${c}</span>`).join("");
+        document.getElementById("activityTags").innerHTML  = rec.activities.map(a => `<span class="tag">${a}</span>`).join("");
+        document.getElementById("advisoryText").textContent = rec.advisory;
+        document.getElementById("recsLoading").classList.add("hidden");
+      }).catch(() => document.getElementById("recsLoading").classList.add("hidden"));
+
+    } catch (err) {
+      document.getElementById("errorBox").textContent = "Fehler: " + err.message;
+      document.getElementById("errorBox").classList.remove("hidden");
+    } finally {
+      document.getElementById("loadingBox").classList.add("hidden");
+      document.getElementById("searchBtn").disabled = false;
+    }
+  }
+
+  document.getElementById("cityInput").addEventListener("keydown", e => { if (e.key === "Enter") search(); });
+  search();
+</script>
+</body>
+</html>
