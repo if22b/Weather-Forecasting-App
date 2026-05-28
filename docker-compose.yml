@@ -1,0 +1,30 @@
+services:
+
+  # System 1: REST Weather API (Port 3001)
+  weather-service:
+    build: ./weather-service
+    container_name: weathersync-weather
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env                  # put OPENWEATHER_API_KEY=xxx here (optional)
+    restart: unless-stopped
+
+  # System 2: SOAP/WSDL Recommendation Service (Port 3002)
+  recommendation-service:
+    build: ./recommendation-service
+    container_name: weathersync-recommendation
+    ports:
+      - "3002:3002"
+    restart: unless-stopped
+
+  # Frontend: plain HTML served by nginx (Port 3000)
+  frontend:
+    build: ./frontend
+    container_name: weathersync-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - weather-service
+      - recommendation-service
+    restart: unless-stopped
