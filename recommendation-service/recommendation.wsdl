@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions
+        name="RecommendationService"
+        targetNamespace="http://weathersync.integration/recommendation"
+        xmlns="http://schemas.xmlsoap.org/wsdl/"
+        xmlns:tns="http://weathersync.integration/recommendation"
+        xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+        xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+
+  <types>
+    <xsd:schema targetNamespace="http://weathersync.integration/recommendation">
+
+      <xsd:element name="GetRecommendationRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="condition"   type="xsd:string"/>
+            <xsd:element name="temperature" type="xsd:float"/>
+            <xsd:element name="humidity"    type="xsd:float"/>
+            <xsd:element name="windSpeed"   type="xsd:float"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="GetRecommendationResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="clothing"    type="xsd:string" maxOccurs="unbounded"/>
+            <xsd:element name="activities"  type="xsd:string" maxOccurs="unbounded"/>
+            <xsd:element name="advisory"    type="xsd:string"/>
+            <xsd:element name="uvWarning"   type="xsd:boolean"/>
+            <xsd:element name="windWarning" type="xsd:boolean"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <message name="GetRecommendationInput">
+    <part name="parameters" element="tns:GetRecommendationRequest"/>
+  </message>
+  <message name="GetRecommendationOutput">
+    <part name="parameters" element="tns:GetRecommendationResponse"/>
+  </message>
+
+  <portType name="RecommendationPortType">
+    <operation name="GetRecommendation">
+      <input  message="tns:GetRecommendationInput"/>
+      <output message="tns:GetRecommendationOutput"/>
+    </operation>
+  </portType>
+
+  <binding name="RecommendationBinding" type="tns:RecommendationPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="GetRecommendation">
+      <soap:operation soapAction="GetRecommendation"/>
+      <input>  <soap:body use="literal"/> </input>
+      <output> <soap:body use="literal"/> </output>
+    </operation>
+  </binding>
+
+  <service name="RecommendationService">
+    <port name="RecommendationPort" binding="tns:RecommendationBinding">
+      <soap:address location="http://localhost:3002/soap"/>
+    </port>
+  </service>
+
+</definitions>
