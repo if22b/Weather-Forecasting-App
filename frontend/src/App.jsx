@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import WeatherCard from "./WeatherCard";
 import RecommendationsCard from "./RecommendationsCard";
+import WeatherMap from "./WeatherMap";
 
 const WEATHER_API = "/api/weather";
 const SOAP_API    = "/api/recommend";
@@ -146,20 +147,27 @@ export default function App() {
                         {error}
                     </p>
                 )}
-
                 {/* Tabs */}
                 {weather && (
                     <div style={{ display: "flex", gap: 4, marginBottom: 20 }}>
                         {["weather", "recs"].map(t => (
-                            <button key={t} onClick={() => setTab(t)}
-                                    style={{
-                                        background: tab === t ? "rgba(255,255,255,0.15)" : "transparent",
-                                        border: "1px solid " + (tab === t ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)"),
-                                        borderRadius: 8, padding: "7px 18px", fontSize: 12, fontWeight: 500,
-                                        color: tab === t ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)",
-                                        cursor: "pointer", fontFamily: "'DM Sans', sans-serif", textTransform: "capitalize",
-                                        transition: "all 0.15s",
-                                    }}>
+                            <button
+                                key={t}
+                                onClick={() => setTab(t)}
+                                style={{
+                                    background: tab === t ? "rgba(255,255,255,0.15)" : "transparent",
+                                    border: "1px solid " + (tab === t ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.08)"),
+                                    borderRadius: 8,
+                                    padding: "7px 18px",
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    color: tab === t ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)",
+                                    cursor: "pointer",
+                                    fontFamily: "'DM Sans', sans-serif",
+                                    textTransform: "capitalize",
+                                    transition: "all 0.15s",
+                                }}
+                            >
                                 {t === "weather" ? "Weather" : "Recommendations"}
                             </button>
                         ))}
@@ -168,8 +176,12 @@ export default function App() {
 
                 {/* Cards */}
                 {tab === "weather" && weather && (
-                    <WeatherCard weather={weather} forecast={forecast} />
+                    <>
+                        <WeatherCard weather={weather} forecast={forecast} />
+                        <WeatherMap weather={weather} />
+                    </>
                 )}
+
                 {tab === "recs" && weather && (
                     <RecommendationsCard recs={recs} />
                 )}

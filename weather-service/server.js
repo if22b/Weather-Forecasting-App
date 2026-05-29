@@ -38,6 +38,8 @@ async function fetchWeather(city) {
   );
   return {
     city:        d.name,
+    lat:         d.coord.lat,
+    lon:         d.coord.lon,
     country:     d.sys.country,
     temperature: Math.round(d.main.temp),
     feels_like:  Math.round(d.main.feels_like),
