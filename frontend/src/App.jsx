@@ -91,7 +91,7 @@ export default function App() {
                 {/* Header */}
                 <div style={{ marginBottom: 36 }}>
                     <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, letterSpacing: "0.25em", color: "rgba(255,255,255,0.35)", margin: "0 0 6px", textTransform: "uppercase" }}>
-                        WeatherSync
+                        Weather Forecasting App
                     </p>
                     <h1 style={{ fontSize: 13, fontWeight: 300, color: "rgba(255,255,255,0.5)", margin: 0 }}>
                         {city}
