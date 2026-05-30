@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  WSDL - Web Services Description Language
+  =========================================
+  Diese Datei beschreibt die SOAP-Schnittstelle des Recommendation Service.
+  Sie ist der "Vertrag" zwischen Server und Client:
+    - Was kann ich aufrufen?
+    - Was muss ich mitschicken?
+    - Was bekomme ich zurück?
+
+  SOAP-Clients (z.B. SoapUI, Java mit JAX-WS, .NET) lesen diese Datei und
+  generieren daraus automatisch passenden Code zum Aufrufen des Services.
+
+  Aufbau einer WSDL (am besten von oben nach unten lesen):
+    1. <types>     – Datenstrukturen (wie sehen Request/Response aus?)
+    2. <message>   – Pakete (was wird gesendet/empfangen?)
+    3. <portType>  – Operationen, abstrakt (welche Methoden gibt es?)
+    4. <binding>   – Protokoll (wie wird kommuniziert? → SOAP über HTTP)
+    5. <service>   – Adresse (wo ist der Service erreichbar?)
+-->
+
+<!--
+  name:            Anzeigename des Services (nur informativ)
+  targetNamespace: Eindeutiger globaler Bezeichner für diesen Service – wie ein Java-Package.
+                   Muss keine erreichbare URL sein, dient nur der Namensraumtrennung wenn
+                   mehrere WSDL-Dateien zusammen verwendet werden.
+  xmlns:           Standard-Namespace für WSDL-Elemente (<definitions>, <message>, etc.)
+  xmlns:tns:       Kurzform für targetNamespace – "tns:" wird als Prefix genutzt um auf
+                   eigene Typen/Messages zu verweisen (z.B. tns:GetRecommendationRequest)
+  xmlns:xsd:       XML Schema – wird für Datentypen wie xsd:string, xsd:float genutzt
+  xmlns:soap:      SOAP-Namespace – ermöglicht SOAP-spezifische Elemente im binding
+-->
 <definitions
         name="RecommendationService"
         targetNamespace="http://weathersync.integration/recommendation"
@@ -7,28 +39,42 @@
         xmlns:xsd="http://www.w3.org/2001/XMLSchema"
         xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
 
+  <!-- ============================================================
+       TEIL 1: TYPES – Datenstrukturen mit XML Schema (XSD) definieren
+       ============================================================
+       Legt fest welche Felder Request und Response haben, und welchen Typ.
+       Der SAX-Parser von strong-soap liest genau diese Definitionen
+       um eingehende SOAP-Nachrichten zu validieren und zu deserialisieren.
+  -->
   <types>
     <xsd:schema targetNamespace="http://weathersync.integration/recommendation">
 
+      <!-- GetRecommendationRequest: Eingabe des Clients
+           <xsd:sequence> = Felder müssen in genau dieser Reihenfolge im XML erscheinen.
+           Alle 4 Felder sind Pflicht (kein minOccurs="0" angegeben → Standard ist 1). -->
       <xsd:element name="GetRecommendationRequest">
         <xsd:complexType>
           <xsd:sequence>
-            <xsd:element name="condition"   type="xsd:string"/>
-            <xsd:element name="temperature" type="xsd:float"/>
-            <xsd:element name="humidity"    type="xsd:float"/>
-            <xsd:element name="windSpeed"   type="xsd:float"/>
+            <xsd:element name="condition"   type="xsd:string"/> <!-- z.B. "Rain", "Clear", "Snow" -->
+            <xsd:element name="temperature" type="xsd:float"/>  <!-- Temperatur in Celsius -->
+            <xsd:element name="humidity"    type="xsd:float"/>  <!-- Luftfeuchtigkeit in % -->
+            <xsd:element name="windSpeed"   type="xsd:float"/>  <!-- Windgeschwindigkeit in m/s -->
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
 
+      <!-- GetRecommendationResponse: Antwort des Servers -->
       <xsd:element name="GetRecommendationResponse">
         <xsd:complexType>
           <xsd:sequence>
+            <!-- maxOccurs="unbounded": dieses Element darf beliebig oft wiederholt werden →
+                 clothing und activities sind also Listen, keine einzelnen Strings.
+                 Beispiel im XML: <clothing>T-Shirt</clothing><clothing>Shorts</clothing> -->
             <xsd:element name="clothing"    type="xsd:string" maxOccurs="unbounded"/>
             <xsd:element name="activities"  type="xsd:string" maxOccurs="unbounded"/>
-            <xsd:element name="advisory"    type="xsd:string"/>
-            <xsd:element name="uvWarning"   type="xsd:boolean"/>
-            <xsd:element name="windWarning" type="xsd:boolean"/>
+            <xsd:element name="advisory"    type="xsd:string"/>   <!-- Einzelner Warnhinweis-Text -->
+            <xsd:element name="uvWarning"   type="xsd:boolean"/>  <!-- true wenn UV-Index hoch -->
+            <xsd:element name="windWarning" type="xsd:boolean"/>  <!-- true wenn Wind > 10 m/s -->
           </xsd:sequence>
         </xsd:complexType>
       </xsd:element>
@@ -36,31 +82,74 @@
     </xsd:schema>
   </types>
 
+  <!-- ============================================================
+       TEIL 2: MESSAGES – Kommunikationspakete
+       ============================================================
+       Eine Message verknüpft einen Namen mit einem Typ aus <types>.
+       Sie beschreibt was bei einem Aufruf konkret gesendet/empfangen wird.
+  -->
+
+  <!-- Das Paket, das der Client an den Server schickt -->
   <message name="GetRecommendationInput">
+    <!-- "tns:" verweist auf den targetNamespace → GetRecommendationRequest aus <types> oben -->
     <part name="parameters" element="tns:GetRecommendationRequest"/>
   </message>
+
+  <!-- Das Paket, das der Server als Antwort zurückschickt -->
   <message name="GetRecommendationOutput">
     <part name="parameters" element="tns:GetRecommendationResponse"/>
   </message>
 
+  <!-- ============================================================
+       TEIL 3: PORT TYPE – Operationen (abstrakt)
+       ============================================================
+       Der portType ist das abstrakte Interface – vergleichbar mit einem
+       Interface in Java/TypeScript. Er definiert WELCHE Operationen es gibt,
+       aber noch nicht WIE sie technisch übertragen werden (das kommt im binding).
+  -->
   <portType name="RecommendationPortType">
     <operation name="GetRecommendation">
-      <input  message="tns:GetRecommendationInput"/>
-      <output message="tns:GetRecommendationOutput"/>
+      <input  message="tns:GetRecommendationInput"/>  <!-- Client schickt dieses Paket -->
+      <output message="tns:GetRecommendationOutput"/> <!-- Server antwortet mit diesem Paket -->
+      <!-- Kein <fault> definiert → Fehler werden hier nicht formal spezifiziert -->
     </operation>
   </portType>
 
+  <!-- ============================================================
+       TEIL 4: BINDING – Protokoll und Übertragungsformat
+       ============================================================
+       Das Binding legt fest WIE der portType technisch realisiert wird.
+       Hier: SOAP 1.1 über HTTP.
+  -->
   <binding name="RecommendationBinding" type="tns:RecommendationPortType">
+
+    <!-- style="document": die SOAP-Nachricht ist ein vollständiges XML-Dokument (moderner Stil).
+         Alternative wäre "rpc" (veraltet). "document" ist flexibler und WS-I-konform.
+         transport: SOAP wird über HTTP transportiert (der Standard-Fall). -->
     <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
     <operation name="GetRecommendation">
+      <!-- soapAction: wird als HTTP-Header "SOAPAction: GetRecommendation" mitgeschickt.
+           Manche Server nutzen diesen Header zum Routing der Anfrage auf die richtige Methode. -->
       <soap:operation soapAction="GetRecommendation"/>
+
+      <!-- use="literal": XML-Daten werden exakt wie im Schema definiert übertragen.
+           Alternative "encoded" ist veraltet und wird nicht mehr empfohlen. -->
       <input>  <soap:body use="literal"/> </input>
       <output> <soap:body use="literal"/> </output>
     </operation>
+
   </binding>
 
+  <!-- ============================================================
+       TEIL 5: SERVICE – Physische Adresse
+       ============================================================
+       Gibt an unter welcher URL der Service tatsächlich erreichbar ist.
+       Der SOAP-Client kombiniert diese Adresse mit dem Binding um Requests zu senden.
+  -->
   <service name="RecommendationService">
     <port name="RecommendationPort" binding="tns:RecommendationBinding">
+      <!-- Die konkrete URL des SOAP-Endpunkts (muss mit soap.listen() in server.js übereinstimmen) -->
       <soap:address location="http://localhost:3002/soap"/>
     </port>
   </service>
