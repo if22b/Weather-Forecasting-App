@@ -1,3 +1,4 @@
+// Wiederverwendbarer Karten-Style
 const GLASS = {
     background: "rgba(255,255,255,0.06)",
     border: "1px solid rgba(255,255,255,0.1)",
@@ -7,6 +8,7 @@ const GLASS = {
     marginBottom: 16,
 };
 
+// Style für kleine Überschriften
 const LABEL = {
     fontSize: 11,
     color: "rgba(255,255,255,0.35)",
@@ -16,6 +18,7 @@ const LABEL = {
     margin: "0 0 12px",
 };
 
+// Kleine Box für einzelne Empfehlungen
 function Pill({ text }) {
     return (
         <span style={{
@@ -28,11 +31,12 @@ function Pill({ text }) {
             color: "rgba(255,255,255,0.72)",
             fontFamily: "'DM Sans', sans-serif",
         }}>
-      {text}
-    </span>
+            {text}
+        </span>
     );
 }
 
+// Wird angezeigt, solange Empfehlungen geladen werden
 function Skeleton() {
     return (
         <div style={GLASS}>
@@ -43,12 +47,14 @@ function Skeleton() {
     );
 }
 
+// Zeigt Kleidung, Aktivitäten und Hinweise an
 export default function RecommendationsCard({ recs }) {
+    // Wenn noch keine Daten da sind, Ladeanzeige zeigen
     if (!recs) return <Skeleton />;
 
     return (
         <>
-            {/* Clothing */}
+            {/* Kleidung */}
             <div style={GLASS}>
                 <p style={LABEL}>Clothing</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -56,7 +62,7 @@ export default function RecommendationsCard({ recs }) {
                 </div>
             </div>
 
-            {/* Activities */}
+            {/* Aktivitäten */}
             <div style={GLASS}>
                 <p style={LABEL}>Activities</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -64,19 +70,32 @@ export default function RecommendationsCard({ recs }) {
                 </div>
             </div>
 
-            {/* Advisory */}
+            {/* Hinweis / Warnung */}
             <div style={{
                 ...GLASS,
+
+                // Andere Farbe, wenn eine Warnung aktiv ist
                 background: recs.uvWarning || recs.windWarning
                     ? "rgba(255,180,50,0.08)"
                     : "rgba(255,255,255,0.04)",
+
+                // Anderer Rahmen, wenn eine Warnung aktiv ist
                 border: recs.uvWarning || recs.windWarning
                     ? "1px solid rgba(255,180,50,0.2)"
                     : "1px solid rgba(255,255,255,0.08)",
             }}>
-                <p style={{ ...LABEL, color: recs.uvWarning || recs.windWarning ? "rgba(255,200,80,0.6)" : "rgba(255,255,255,0.35)" }}>
+                <p style={{
+                    ...LABEL,
+
+                    // Label-Farbe bei Warnung ändern
+                    color: recs.uvWarning || recs.windWarning
+                        ? "rgba(255,200,80,0.6)"
+                        : "rgba(255,255,255,0.35)"
+                }}>
                     Advisory
                 </p>
+
+                {/* Text des Hinweises */}
                 <p style={{ fontSize: 14, color: "rgba(255,255,255,0.75)", margin: 0, lineHeight: 1.6 }}>
                     {recs.advisory}
                 </p>
