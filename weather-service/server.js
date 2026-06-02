@@ -56,6 +56,12 @@ async function fetchWeather(city) {
       `${OWM}/weather?q=${encodeURIComponent(city)}&appid=${API_KEY}&units=metric`
   );
 
+  function formatTime(unix, offset) {
+    const local = new Date((unix + offset) * 1000);
+
+    return local.toUTCString().slice(17, 22);
+  }
+
   // Rohdaten aus der API-Antwort in ein sauberes Objekt umwandeln
   return {
     city:        d.name,                    // Von OWM zurückgegebener offizieller Stadtname
@@ -71,8 +77,8 @@ async function fetchWeather(city) {
     icon:        d.weather[0].icon,         // Icon-Code für OWM-Wettersymbole (z.B. "10d")
     pressure:    d.main.pressure,           // Luftdruck in hPa
     // Unix-Timestamp (Sekunden) × 1000 = JS-Millisekunden → als lesbare Uhrzeit formatieren
-    sunrise:     new Date(d.sys.sunrise * 1000).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }),
-    sunset:      new Date(d.sys.sunset  * 1000).toLocaleTimeString("de-AT", { hour: "2-digit", minute: "2-digit" }),
+    sunrise: formatTime(d.sys.sunrise, d.timezone),
+    sunset:  formatTime(d.sys.sunset,  d.timezone),
   };
 }
 
